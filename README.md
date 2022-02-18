@@ -10,4 +10,4 @@ https://stackoverflow.com/questions/33368261/what-is-the-easiest-way-to-install-
 
 https://learn.adafruit.com/adafruit-rgb-matrix-plus-real-time-clock-hat-for-raspberry-pi/driving-matrices
 https://github.com/hzeller/rpi-rgb-led-matrix
-Thorlabs sdk libraries
+Thorlabs BETA SDK https://mft.thorlabs.com/?ShareToken=949D6C0F1BB23391736A9135DEF3D2D247BBDF98
