@@ -1,6 +1,6 @@
 from rgbmatrix import RGBMatrix, RGBMatrixOptions
 import time
-import threading
+import asyncio
 
 exR = (255,0,0)
 exG = (0,255,0)
@@ -10,8 +10,6 @@ ex584 = (255,239,0)
 ex485 = (0,230,255)
 
 plate96 = [(x,y) for y in range(1,12,3) for x in range(15,51,3)]
-plate96_full = [(x,y) for y in range(0,36,1) for x in range(0,64,1)]
-
 
 class Iluminator:
 
@@ -57,7 +55,7 @@ class Iluminator:
         self._state = 0
         self._matrix.Fill(0,0,0)
 
-    def on_measure(self, RGB: tuple, duration: float, pattern = plate96, operation_mode = 'PAUSE'):
+    async def on_measure(self, RGB: tuple, duration: float, pattern = plate96, operation_mode = 'PAUSE'):
         self.turn_off()
         self._manager(operation_mode, time.time())
 
@@ -67,23 +65,26 @@ class Iluminator:
         time.sleep(duration)
 
         if self.done == 0:
-            self.on_stimulate('test',0)
+            await self.on_stimulate('test',0)
         else:
             self.turn_off()
 
-    def on_stimulate(self, schedule, duration: float): # static. if dynamic call multiple times
+    async def on_stimulate(self, schedule, duration: float): # static. if dynamic call multiple times
+        print('Stimulate \n')
 
         self._state = 2
         self._memory = (schedule, duration, time.time())
 
         # do schedule
         self._matrix.Fill(*exB)
-        time.sleep(duration)
+        await asyncio.sleep(duration)
+        print('Stimulate Done \n')
 
-    def stim_wrap(self,d):
+
+    async def stim_wrap(self,d):
         print('Wrap \n')
-        self.on_stimulate('test',d)
-        self.turn_off()
+        await self.on_stimulate('test',d)
+        self.done = 1
         print('Wrap Done \n')
        
 

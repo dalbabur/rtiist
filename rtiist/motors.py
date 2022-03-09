@@ -40,13 +40,13 @@ class FilterWheel:
         self.motor.throttle = 1
         time.sleep(2)
         print('moving')
-        while self.aligned_sensor.value:
+        while self.aligned_sensor.value: # time it just in case it goes on forever 
             self.motor.throttle = 1
         self.motor.throttle = 0
         print('stop')
         if counter: self._counter()
 
-    def _find_first(self): # time it just in case it goes on forever 
+    def _find_first(self): 
         for i in range(self.filter_N):
             print(i)
             self._next(counter = False)
@@ -67,5 +67,10 @@ class FilterWheel:
 
         while self.current_pos != new_pos:
             self._next()
-
+    
+    def get_current_filter(self):
+        return self.filter_list[self.current_pos]
+    
+    def __del__(self): # del vs atexit
+        self.motor.throttle = 0
         

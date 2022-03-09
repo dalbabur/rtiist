@@ -1,51 +1,61 @@
 import matplotlib.pyplot as plt
-import numpy as np
 
 from imaging import Imager
-from ilumination import Iluminator, exR
-import asyncio
-import aiofiles
+from rtiist.ilumination import Iluminator, exG, plate96_full, ex584
+import threading
+from concurrent.futures import ThreadPoolExecutor
+
 import time
 
-from thorlabs_tsi_sdk.tl_camera import TLCameraSDK, TLCamera, Frame
+from thorlabs_tsi_sdk.tl_camera import TLCameraSDK
 from thorlabs_tsi_sdk.tl_camera_enums import OPERATION_MODE
 
-imgs = []
 
-async def save_image(path: str, image):
-    async with aiofiles.open(path, "wb") as file:
-        await file.write(image)
+import logging
 
-async def main():
-    a = Iluminator()
-    t1 = asyncio.create_task(a.stim_wrap(2))
+logging.basicConfig(format='%(asctime)s - %(thread)d - %(message)s', datefmt='%d-%b-%y %H:%M:%S', level = logging.INFO)
+log = logging.getLogger(__name__)
 
+def main():
     with TLCameraSDK() as sdk:
         camera_list = sdk.discover_available_cameras()
         with sdk.open_camera(camera_list[0]) as camera:
-
             print("Setting camera parameters...")
             image_acquisition = Imager(camera)
             camera.frames_per_trigger_zero_for_unlimited = 1
-            camera.exposure_time_us = 3*1000*1000
             camera.operation_mode = OPERATION_MODE.SOFTWARE_TRIGGERED
             camera.arm(1)
 
-            while a.done == 0:
+            a = Iluminator()
+            stimulation = threading.Thread(target=a.stim_wrap, args=(22,))
+            stimulation.start()
+            t0 = time.time()
+            imgs = []
+
+            while stimulation.is_alive():
+
+
+                camera.exposure_time_us = 3*1000*1000
                 camera.issue_software_trigger()
-                await a.on_measure(exR, 3)
-                imgs.append(image_acquisition.run())
-                print(type(imgs[-1]))
-                time.sleep(5)
-            
+
+                a.on_measure(ex584,30, plate96_full)
+                
+                get_img = threading.Thread(target = lambda: imgs.append(image_acquisition.run()))
+                get_img.start()
+
+                time.sleep(6)
+
+            print(time.time()-t0)
             image_acquisition.stop()
 
-    await t1
+    save_img = lambda enum: plt.imsave('/home/pi/LAB/rt-opto/rtiist/images/img-'+str(enum[0])+'.svg', enum[1])
+    with ThreadPoolExecutor(len(imgs)) as executor:
+        executor.map(save_img, list(enumerate(imgs)))
+    return 
 
 if __name__ == "__main__":
-    asyncio.run(main())
-    for k,img in enumerate(imgs):
-        asyncio.run(save_image('/home/pi/LAB/rt-opto/rtiist/img-'+str(k)+'.svg', img))
+    main()
+
 
 
 
