@@ -1,8 +1,6 @@
 import threading
-from tkinter import N
 
 
-from ilumination import Iluminator, Measurement, exG, plate96_full, ex584
 from concurrent.futures import ThreadPoolExecutor
 
 import time
@@ -12,9 +10,13 @@ from thorlabs_tsi_sdk.tl_camera_enums import OPERATION_MODE
 import schedule
 
 import logging
-from imaging import Measurement, Stimulation, Imager
+from imaging import Imager
+from ilumination import Iluminator, Measurement,Stimulation, exG, plate96_full, ex584
 from motors import FilterWheel
 log = logging.getLogger(__name__)
+
+def timestamp(t):
+    return str(round(time.time() - t, 2))
 
 class Engine:
     def __init__(self, ImgProcessor = None, RGBMatrixOptions = None, MotorDict = {}) -> None:
@@ -83,6 +85,7 @@ class Engine:
             self.imager = Imager(self._cam)
 
     def _setup_img_processor(self, ImgProcessor = None):
+        return
         if not ImgProcessor:
             self.img_processor = DefaultImgProcessor()
         else:
@@ -106,17 +109,19 @@ class Engine:
         pass
 
     def __del__(self):
-        to_dispose = [self.camera, self._cam, self._camSDK]
+        to_dispose = [self.imager, self._cam, self._camSDK]
         try:
             [x.dispose() for x in to_dispose]
         except:
             pass
         print('Everything disposed correctly')
 
-    def _setup_thread(self, target, name, args):
+    def _setup_thread(self, target, name, args = ()):
+        if not hasattr(args, '__iter__'): args = (args,)
         thread  = threading.Thread(target=target, name=name, args=args)
         thread.start()
         log.info('Thread ' + name + ' started.\n')
+        return thread
 
     def set_measurements(self, measurements:list):
         for m in measurements:
@@ -129,26 +134,24 @@ class Engine:
         pass
 
     def measure(self, measurement: Measurement, output = 'RAW'):
-        log.info('Measurement ' + measurement.label + ' started.\n')
-        
-        self.iluminator.on_measure(measurement)
+        label = 'iluminating_'+measurement.label + '_' + timestamp(self._t0)
+        i_thread = self._setup_thread(target = self.iluminator.on_measure, name = label, args = measurement)
 
         if self.imager:
             self.imager._camera.exposure_time_us = measurement.exposure *1000 *1000
-            self.imager._camera.issue_software_trigger()
 
-            get_img = threading.Thread(target = lambda: self.raw_data.append(self.imager.run()))
-            get_img.start()
+            label = 'capturing_'+measurement.label + '_' + timestamp(self._t0)
+            c_thread = self._setup_thread(target = 
+                lambda: self.raw_data.append(self.imager.capture(measurement.exposure)), name = label)
         else:
             print('No camera, no measurement.')
         
         if output == 'RAW':
             pass
         elif output == 'PROCESS':
-            get_img.join()
-            label = 'processing_'+measurement.label
+            c_thread.join()
+            label = 'processing_'+measurement.label + '_' + timestamp(self._t0)
             self._setup_thread(self.process_data, label, self.raw_data[-1])
-
         pass
     
     def process_data(self, raw_data):
@@ -156,7 +159,7 @@ class Engine:
         
     def _setup_schedule(self):
         for m in self.measurements:
-            label = m.label + '_' + str(time.time()-self._t0)
+            label = m.label + '_' + timestamp(self._t0)
             self.scheduler.every(m.frequency).minutes.do(self._setup_thread,label,m)
 
         if self.stimulation:

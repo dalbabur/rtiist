@@ -1,6 +1,8 @@
 from thorlabs_tsi_sdk.tl_camera_enums import SENSOR_TYPE
 from thorlabs_tsi_sdk.tl_mono_to_color_processor import MonoToColorProcessorSDK
-
+import time
+import logging
+log = logging.getLogger(__name__)
 
 """ ImageAcquisitionThread
 
@@ -65,23 +67,29 @@ class Imager:
         scaled_image = frame.image_buffer >> (self._bit_depth - 8)
         return scaled_image
 
-    def run(self):
+    def capture(self, exposure):
+        log.info('Capturing ON.')
+
+        self._camera.issue_software_trigger()
+        time.sleep(exposure+1)
+
         if not self._stop_event:
             try:
                 frame = self._camera.get_pending_frame_or_null()
+                print(type(frame))
                 if frame is not None:
-                    print('got frame')
+                    log.info('Got frame! \n')
                     if self._is_color:
                         pil_image = self._get_color_image(frame)
                     else:
                         pil_image = self._get_image(frame)
                     self._image = pil_image
-                    print(type(pil_image))
 
             except Exception as error:
                 print("Encountered error: {error}, image acquisition will stop.".format(error=error))
                 self.dispose()
-        
+
+        log.info('Capturing OFF.')
         return self._image
 
     def dispose(self):
