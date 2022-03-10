@@ -17,36 +17,38 @@ logging.basicConfig(format='%(asctime)s - %(thread)d - %(message)s', datefmt='%d
 log = logging.getLogger(__name__)
 
 def main():
-    with TLCameraSDK() as sdk:
-        camera_list = sdk.discover_available_cameras()
-        with sdk.open_camera(camera_list[0]) as camera:
-            print("Setting camera parameters...")
-            image_acquisition = Imager(camera)
-            camera.frames_per_trigger_zero_for_unlimited = 1
-            camera.operation_mode = OPERATION_MODE.SOFTWARE_TRIGGERED
-            camera.arm(1)
+    sdk = TLCameraSDK() # make sure to dispose!
+    camera_list = sdk.discover_available_cameras()
+    with sdk.open_camera(camera_list[0]) as camera:
+        print("Setting camera parameters...")
+        image_acquisition = Imager(camera)
+        camera.frames_per_trigger_zero_for_unlimited = 1
+        camera.operation_mode = OPERATION_MODE.SOFTWARE_TRIGGERED
+        camera.arm(1)
 
-            a = Iluminator()
-            stimulation = threading.Thread(target=a.stim_wrap, args=(22,))
-            stimulation.start()
-            t0 = time.time()
-            imgs = []
+        a = Iluminator()
+        stimulation = threading.Thread(target=a.stim_wrap, args=(22,))
+        stimulation.start()
+        t0 = time.time()
+        imgs = []
 
-            while stimulation.is_alive():
+        while stimulation.is_alive():
 
 
-                camera.exposure_time_us = 3*1000*1000
-                camera.issue_software_trigger()
+            image_acquisition._camera.exposure_time_us = 3*1000*1000
+            image_acquisition._camera.issue_software_trigger()
 
-                a.on_measure(ex584,30, plate96_full)
-                
-                get_img = threading.Thread(target = lambda: imgs.append(image_acquisition.run()))
-                get_img.start()
+            a.on_measure(ex584,30, plate96_full)
+            
+            get_img = threading.Thread(target = lambda: imgs.append(image_acquisition.run()))
+            get_img.start()
 
-                time.sleep(6)
+            time.sleep(6)
 
-            print(time.time()-t0)
-            image_acquisition.stop()
+        print(time.time()-t0)
+        image_acquisition.dispose()
+
+    sdk.dispose()
 
     save_img = lambda enum: plt.imsave('/home/pi/LAB/rt-opto/rtiist/images/img-'+str(enum[0])+'.svg', enum[1])
     with ThreadPoolExecutor(len(imgs)) as executor:

@@ -80,11 +80,11 @@ class Imager:
 
             except Exception as error:
                 print("Encountered error: {error}, image acquisition will stop.".format(error=error))
-                self.stop()
+                self.dispose()
         
         return self._image
 
-    def stop(self):
+    def dispose(self):
         self._stop_event = True  
         print("Image acquisition has stopped")
         if self._is_color:
