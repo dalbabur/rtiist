@@ -70,13 +70,13 @@ class Imager:
     def capture(self, exposure):
         log.info('Capturing ON.')
 
+        self._camera.exposure_time_us = int(exposure *10e6)
+        self._camera.image_poll_timeout_ms = int((exposure+1)*10e3)
         self._camera.issue_software_trigger()
-        time.sleep(exposure+1)
 
         if not self._stop_event:
             try:
                 frame = self._camera.get_pending_frame_or_null()
-                print(type(frame))
                 if frame is not None:
                     log.info('Got frame! \n')
                     if self._is_color:
@@ -84,6 +84,8 @@ class Imager:
                     else:
                         pil_image = self._get_image(frame)
                     self._image = pil_image
+                else:
+                    self._image = frame
 
             except Exception as error:
                 print("Encountered error: {error}, image acquisition will stop.".format(error=error))

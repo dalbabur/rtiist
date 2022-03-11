@@ -137,9 +137,9 @@ class Engine:
         label = 'iluminating_'+measurement.label + '_' + timestamp(self._t0)
         i_thread = self._setup_thread(target = self.iluminator.on_measure, name = label, args = measurement)
 
+        # filter wheel!
+        
         if self.imager:
-            self.imager._camera.exposure_time_us = measurement.exposure *1000 *1000
-
             label = 'capturing_'+measurement.label + '_' + timestamp(self._t0)
             c_thread = self._setup_thread(target = 
                 lambda: self.raw_data.append(self.imager.capture(measurement.exposure)), name = label)
@@ -155,7 +155,7 @@ class Engine:
         pass
     
     def process_data(self, raw_data):
-        self.data.append(self.img_processor.run(raw_data))
+        self.data.append(self.img_processor.process(raw_data))
         
     def _setup_schedule(self):
         for m in self.measurements:
