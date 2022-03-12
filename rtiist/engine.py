@@ -118,7 +118,7 @@ class Engine:
         print('Everything disposed correctly')
 
     def _setup_thread(self, target, name, args = ()):
-        if not hasattr(args, '__iter__'): args = (args,)
+        if not (type(args) == tuple): args = (args,)
         thread  = threading.Thread(target=target, name=name, args=args)
         thread.start()
         log.info('Thread ' + name + ' started.\n')

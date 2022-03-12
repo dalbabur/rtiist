@@ -9,6 +9,6 @@ from ilumination import Measurement
 e = Engine(MotorDict = {'FilterWheel':'default'})
 m1 = Measurement('lol',(255,0,0),'4',[(5,5),],10,10)
 
-for i in range(3):
-    e.measure(m1)
-    time.sleep(20)
+for i in range(1):
+    e.measure(m1, output='PROCESS')
+    time.sleep(60)
