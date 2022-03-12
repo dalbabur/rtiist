@@ -9,7 +9,7 @@ class DefaultImgProcessor:
     def process(self, raw_data):
         pass
 
-    def prepare_mask(self, img):
+    def make_mask(self, img):
         if len(self.masks) > 0: 
             print('mask already created')
             return
@@ -30,7 +30,7 @@ class DefaultImgProcessor:
         
         if circles is not None:
             circles = np.uint16(np.around(circles))
-            self._detected_circles = circles
+            self._detected_roi = circles
 
             X,Y = gray.shape
             r = np.uint16(np.mean(circles[0][:,2])+7)
@@ -46,23 +46,28 @@ class DefaultImgProcessor:
                 self.masks.append(mask)
 
     def show_mask(self):
-        r = np.uint16(np.mean(self._detected_circles[0][:,2])+7)
+        if not(len(self.masks) > 0): 
+            print('no mask created')
+            return
+
+        r = np.uint16(np.mean(self._detected_roi[0][:,2])+7)
         thresh = np.zeros((self._mask_img.shape))
         img = np.copy(self._mask_img)
 
         vals = self.extract_values(img)
 
-        for c,m,v in zip(self._detected_circles[0,:], self.masks, vals):
+        for c,m,v in zip(self._detected_roi[0,:], self.masks, vals):
             cv.circle(img,(c[0],c[1]),r,(255,255,255),1)
             thresh = thresh + m
-            cv.putText(img, str(v), (c[0] + r+ 5, c[1] + r+5),cv.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0))
+            cv.putText(img, str(np.round(v,2)), (c[0] + r+ 5, c[1] + r+5),cv.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0))
         
         cv.imshow('detected circles',thresh) 
         cv.imshow('mean circles',img)
-
+        cv.waitKey(0)
+        
     def extract_values(self, img):
         vals = []
         for m in self.masks:
-            vals.append(np.round(np.mean((img*m)[(img*m)>0]),2))
+            vals.append(np.mean((img*m)[(img*m)>0]))
         
         return vals
