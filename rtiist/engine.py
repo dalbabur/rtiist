@@ -13,6 +13,8 @@ import logging
 from imaging import Imager
 from ilumination import Iluminator, Measurement,Stimulation, exG, plate96_full, ex584
 from motors import FilterWheel
+from img_processing import DefaultImgProcessor
+
 log = logging.getLogger(__name__)
 
 def timestamp(t):
@@ -85,7 +87,6 @@ class Engine:
             self.imager = Imager(self._cam)
 
     def _setup_img_processor(self, ImgProcessor = None):
-        return
         if not ImgProcessor:
             self.img_processor = DefaultImgProcessor()
         else:
@@ -138,7 +139,7 @@ class Engine:
         i_thread = self._setup_thread(target = self.iluminator.on_measure, name = label, args = measurement)
 
         # filter wheel!
-        
+
         if self.imager:
             label = 'capturing_'+measurement.label + '_' + timestamp(self._t0)
             c_thread = self._setup_thread(target = 

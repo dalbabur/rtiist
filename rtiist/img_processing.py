@@ -6,9 +6,6 @@ class DefaultImgProcessor:
         self.masks = []
         pass
 
-    def process(self, raw_data):
-        pass
-
     def make_mask(self, img):
         if len(self.masks) > 0: 
             print('mask already created')
@@ -71,3 +68,7 @@ class DefaultImgProcessor:
             vals.append(np.mean((img*m)[(img*m)>0]))
         
         return vals
+    
+    def process(self, raw_data):
+        img = cv.cvtColor(raw_data, cv.COLOR_RGB2GRAY)
+        return self.extract_values(img)
