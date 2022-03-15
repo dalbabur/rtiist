@@ -1,3 +1,4 @@
+import string
 from rgbmatrix import RGBMatrix, RGBMatrixOptions
 import time
 import threading
@@ -40,6 +41,7 @@ class Measurement:
         layout (list): list of LED to turn on
         exposure (float): camera exposure time, in seconds
         frequency (float): frequency of measurements, in minutes
+        output (string): 'RAW' or 'PROCESS'
     """
     label: str 
     exRGB: list
@@ -47,6 +49,7 @@ class Measurement:
     layout: list
     exposure: float
     frequency: float
+    output: string
 
 class LightSchedule:
     def __init__(self, func):
@@ -93,7 +96,8 @@ class Stimulation:
 
     def evaluate(self, time):
         self._check()
-        return self.positions, list(map(lambda L: L.evaluate(time),self.schedules))
+        log.info('Turning ON LEDs for stimualation '+ self.label)
+        return list(map(lambda L: L.evaluate(time),self.schedules)), self.positions
 
 class Iluminator:
     """
@@ -145,7 +149,7 @@ class Iluminator:
 
     def on_stimulate(self, RGBs:list, positions:list): # static. if dynamic call multiple times
         log.info('updating LEDs for stimulation')
-
+        self.turn_off()
         self._state = 2
 
         for k,rgb in enumerate(RGBs):

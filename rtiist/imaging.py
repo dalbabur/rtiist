@@ -71,7 +71,7 @@ class Imager:
         log.info('Capturing ON.')
 
         self._camera.exposure_time_us = int(exposure *10e6)
-        self._camera.image_poll_timeout_ms = int((exposure+1)*10e3)
+        self._camera.image_poll_timeout_ms = int((exposure+0.5)*10e3)
         self._camera.issue_software_trigger()
 
         if not self._stop_event:

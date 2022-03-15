@@ -17,8 +17,10 @@ from img_processing import DefaultImgProcessor
 
 log = logging.getLogger(__name__)
 
+def currenttime(t):
+    return time.time()-t
 def timestamp(t):
-    return str(round(time.time() - t, 2))
+    return str(round(currenttime(t), 2))
 
 class Engine:
     def __init__(self, ImgProcessor = None, RGBMatrixOptions = None, MotorDict = {}) -> None:
@@ -127,6 +129,8 @@ class Engine:
     def set_measurements(self, measurements:list):
         for m in measurements:
             self.measurements.append(m)
+
+        #check time between measurmeents?
     
     def set_stimulation(self, stimulation: Stimulation):
         self.stimulation = stimulation
@@ -134,11 +138,12 @@ class Engine:
     def set_controller(self):
         pass
 
-    def measure(self, measurement: Measurement, output = 'RAW'):
+    def measure(self, measurement: Measurement):
         label = 'iluminating_'+measurement.label + '_' + timestamp(self._t0)
         i_thread = self._setup_thread(target = self.iluminator.on_measure, name = label, args = measurement)
 
-        # filter wheel!
+        if self.filterWheel:
+            self.filterWheel.set_filter(measurement.emFilter)
 
         if self.imager:
             label = 'capturing_'+measurement.label + '_' + timestamp(self._t0)
@@ -147,9 +152,9 @@ class Engine:
         else:
             print('No camera, no measurement.')
         
-        if output == 'RAW':
+        if measurement.output == 'RAW':
             pass
-        elif output == 'PROCESS':
+        elif measurement.output == 'PROCESS':
             c_thread.join()
             label = 'processing_'+measurement.label + '_' + timestamp(self._t0)
             self._setup_thread(self.process_data, label, self.raw_data[-1])
@@ -157,21 +162,29 @@ class Engine:
     
     def process_data(self, raw_data):
         self.data.append(self.img_processor.process(raw_data))
+    
+    def stimulate(self, stimulation: Stimulation):
+        self.iluminator.on_stimulate(*stimulation.evaluate(currenttime(self.t0)))
         
     def _setup_schedule(self):
         for m in self.measurements:
             label = m.label + '_' + timestamp(self._t0)
-            self.scheduler.every(m.frequency).minutes.do(self._setup_thread,label,m)
+            self.scheduler.every(m.frequency).minutes.do(self._setup_thread,self.measure,label,m)
 
         if self.stimulation:
-            self.scheduler.every(self.stimulation.frequency).minuted.do(f,args)
+            self.scheduler.every(self.stimulation.frequency).minutes.do(self.stimulate,self.stimulation)
         
-        if self.controller:
-            self.scheduler.every(self.controller.frequency).minutes.do(f,args)
+        # if self.controller:
+        #     self.scheduler.every(self.controller.frequency).minutes.do(f,args)
 
-    def start(self):
+    def start(self, duration = 3):
         self.t0 = time.time()
-        pass
+        self._setup_schedule()
+        self.tf_hat = duration*60
+
+        while currenttime(self.t0) < self.tf_hat:
+            self.scheduler.run_pending()
+            time.sleep(1)
 
     def stop():
         pass
